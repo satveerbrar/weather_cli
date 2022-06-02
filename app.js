@@ -1,3 +1,4 @@
+const fs = require('fs');
 const yargs = require('yargs/yargs');
 const { hideBin } = require('yargs/helpers');
 const argv = yargs(hideBin(process.argv)).argv;
@@ -6,25 +7,32 @@ require('dotenv').config();
 
 const WEATHER_API_KEY = process.env.WEATHER_API_KEY;
 const GEOCODING_API_TOKEN = process.env.GEOCODING_API_TOKEN;
+const date = new Date();
 
 let location, units, unit_name;
+let wholeCommand='Command requested by user\n';
 
 const tempInfo = [];
 
 const validateArguments = () => {
     if (argv._[0]) {
         location = argv._[0];
+        wholeCommand += `node ${argv.$0} ${location}`;
         if (argv.c) {
             units = "metric";
             unit_name = 'C'
+            wholeCommand += ` -c`
         }else if (argv.f) {
             units = "imperial";
             unit_name = 'F'
+            wholeCommand += ` -f`
         }
         else {
             units = "metric"
             unit_name = 'C'
         }
+        wholeCommand += ` at ${date}`
+        writeFile(wholeCommand)
         return true
     }
     else {
@@ -84,12 +92,25 @@ const addTempInfo = (response) => {
     }
 }
 
+const writeFile = (value) => {
+    fs.appendFile('weather.txt', `${value}\n\n`, (err) => {
+        return err
+    })
+}
 
 const displayTempCli = async () => {
     await getTempInfo();
+    let writeFileResponse;
     for (place of tempInfo) {
         const summary = `Current temperature in ${place.place_name} is ${place.temp}${unit_name}\nConditions are currently ${place.description}\nYou can expect max temp ${place.temp_max}${unit_name} and min temp ${place.temp_min}${unit_name}`;
         console.log(`\n${summary}`)
+        writeFileResponse = writeFile(summary);
+    }
+    if (writeFileResponse == null) {
+        console.log("\nWeather was added to your weather tracking file, weather.txt")
+    }
+    else {
+        console.log(`Error: Appending to file was not succesfull ${writeFileResponse}`)
     }
 }
 
